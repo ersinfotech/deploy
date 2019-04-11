@@ -33,6 +33,14 @@ program.command('app [name]').action(async name => {
   }
 })
 
+program.command('run [command...]').action(command => {
+  for (const [hostName, host] of Object.entries(config.host)) {
+    console.log(`${host} output:`)
+    shell.exec(`ssh ${host} ${command.join(' ')}`)
+    console.log('')
+  }
+})
+
 program.command('nginx').action(async () => {
   const prompt = new Password({
     message: '[sudo] password:',
