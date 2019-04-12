@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const fs = require('fs')
+const path = require('path')
 
 module.exports = (ecosystemPath, app) => {
   const apps = _.map(app, (d, name) => {
@@ -10,6 +11,7 @@ module.exports = (ecosystemPath, app) => {
     } else {
       setting = { ...setting, ...d }
     }
+    setting.cwd = setting.cwd || path.dirname(setting.script)
     return setting
   })
 

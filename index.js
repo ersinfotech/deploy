@@ -5,6 +5,7 @@ const { MultiSelect, Password } = require('enquirer')
 const _ = require('lodash')
 const shell = require('shelljs')
 const Promise = require('bluebird')
+const chalk = require('chalk')
 const deployPath = require('./deployPath')
 const writeEcosystem = require('./writeEcosystem')
 const pkg = require('./package.json')
@@ -40,17 +41,17 @@ program.command('app [name]').action(async name => {
       if (app.host && app.host !== hostName) {
         continue
       }
+      console.log(chalk.green(`${hostName} ${name} startOrRestart`))
       shell.exec(
         `ssh ${host} pm2 startOrRestart ${config.ecosystemPath} --only ${name}`
       )
-      console.log(`${hostName} ${name} startOrRestart`)
     }
   }
 })
 
 program.command('run [command...]').action(command => {
   for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(`${hostName} run output:`)
+    console.log(chalk.green(`${hostName} run output:`))
     shell.exec(`ssh ${host} ${command.join(' ')}`)
     console.log('')
   }
@@ -62,7 +63,7 @@ program.command('sudo [command...]').action(async command => {
   })
   const password = await prompt.run()
   for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(`${hostName} sudo output:`)
+    console.log(chalk.green(`${hostName} sudo output:`))
     const { stdout } = shell.exec(
       `echo ${password} | ssh -tt ${host} sudo ${command.join(' ')}`,
       { silent: true }
