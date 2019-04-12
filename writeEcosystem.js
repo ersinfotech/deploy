@@ -2,7 +2,7 @@ const _ = require('lodash')
 const fs = require('fs')
 const path = require('path')
 
-module.exports = (ecosystemPath, app) => {
+module.exports = ({ app, ecosystemPath }) => {
   const apps = _.map(app, (d, name) => {
     let setting = {}
     setting.name = name

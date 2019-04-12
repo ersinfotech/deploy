@@ -16,7 +16,7 @@ program.version(pkg.version, '-v, --version')
 
 program.command('app [name]').action(async name => {
   let names
-  writeEcosystem(config.ecosystemPath, config.app)
+  writeEcosystem(config)
   if (name) {
     const app = config.app[name]
     if (!app) {
@@ -53,7 +53,6 @@ program.command('run [command...]').action(command => {
   for (const [hostName, host] of Object.entries(config.host)) {
     console.log(chalk.green(`${hostName} run output:`))
     shell.exec(`ssh ${host} ${command.join(' ')}`)
-    console.log('')
   }
 })
 
@@ -74,7 +73,6 @@ program.command('sudo [command...]').action(async command => {
         .replace(/^.*\r\n/, '')
         .trim()
     )
-    console.log('')
   }
 })
 
