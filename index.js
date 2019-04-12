@@ -1,34 +1,50 @@
 #!/usr/bin/env node
 
 const program = require('commander')
-const { Select, Password } = require('enquirer')
+const { MultiSelect, Password } = require('enquirer')
 const _ = require('lodash')
 const shell = require('shelljs')
 const Promise = require('bluebird')
 const deployPath = require('./deployPath')
+const writeEcosystem = require('./writeEcosystem')
+const pkg = require('./package.json')
 
 const config = require(deployPath)
 
+program.version(pkg.version, '-v, --version')
+
 program.command('app [name]').action(async name => {
-  if (!name) {
+  let names
+  writeEcosystem(config.ecosystemPath, config.app)
+  if (name) {
+    const app = config.app[name]
+    if (!app) {
+      console.error(`${name} not exists`)
+      return
+    }
+    names = _.castArray(name)
+  } else {
     try {
-      const prompt = new Select({
+      const prompt = new MultiSelect({
         message: 'Select an app to restart',
         choices: _.keys(config.app),
       })
-      name = await prompt.run()
+      names = await prompt.run()
     } catch (error) {
       return
     }
   }
-  const app = config.app[name]
-  if (!app) {
-    console.error(`${name} not exists`)
-    return
-  }
   for (const [hostName, host] of Object.entries(config.host)) {
-    shell.exec(`ssh ${host} pm2 startOrRestart ${app}`)
-    console.log(`${host} ${name} startOrRestart`)
+    for (const name of names) {
+      const app = config.app[name]
+      if (app.host && app.host !== hostName) {
+        continue
+      }
+      shell.exec(
+        `ssh ${host} pm2 startOrRestart ${config.ecosystemPath} --only ${name}`
+      )
+      console.log(`${hostName} ${name} startOrRestart`)
+    }
   }
 })
 
