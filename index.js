@@ -36,14 +36,20 @@ program.command('app [name]').action(async name => {
     }
   }
   for (const [hostName, host] of Object.entries(config.host)) {
-    for (const name of names) {
+    const appNames = _.reject(names, name => {
       const app = config.app[name]
       if (app.host && app.host !== hostName) {
-        continue
+        return true
       }
-      console.log(chalk.green(`${hostName} ${name} startOrRestart`))
+    })
+    if (!_.isEmpty(appNames)) {
+      console.log(
+        chalk.green(`${hostName} ${appNames.join(', ')} startOrRestart`)
+      )
       shell.exec(
-        `ssh ${host} pm2 startOrRestart ${config.ecosystemPath} --only ${name}`
+        `ssh ${host} pm2 startOrRestart ${
+          config.ecosystemPath
+        } --only ${appNames.join(',')}`
       )
     }
   }
