@@ -50,7 +50,7 @@ program.command('app [name]').action(async name => {
 
 program.command('run [command...]').action(command => {
   for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(`${host} run output:`)
+    console.log(`${hostName} run output:`)
     shell.exec(`ssh ${host} ${command.join(' ')}`)
     console.log('')
   }
@@ -62,16 +62,15 @@ program.command('sudo [command...]').action(async command => {
   })
   const password = await prompt.run()
   for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(`${host} sudo output:`)
+    console.log(`${hostName} sudo output:`)
     const { stdout } = shell.exec(
       `echo ${password} | ssh -tt ${host} sudo ${command.join(' ')}`,
       { silent: true }
     )
     console.log(
       stdout
-        .replace(/^.*[\r\n]/, '')
-        .replace(/^.*[\r\n]/, '')
-        .replace(/^.*[\r\n]/, '')
+        .replace(/^.*\r\n/, '')
+        .replace(/^.*\r\n/, '')
         .trim()
     )
     console.log('')
@@ -83,12 +82,19 @@ program.command('nginx').action(async () => {
     message: '[sudo] password:',
   })
   const password = await prompt.run()
+  const { code } = shell.exec(`echo ${password} | sudo -S nginx -t`, {
+    silent: true,
+  })
+  if (code !== 0) {
+    console.error(`nginx test fail`)
+    return
+  }
   for (const [hostName, host] of Object.entries(config.host)) {
     shell.exec(
       `echo ${password} | ssh -tt ${host} sudo systemctl restart nginx`,
       { silent: true }
     )
-    console.log(`${host} nginx restart`)
+    console.log(`${hostName} nginx restart`)
   }
 })
 
