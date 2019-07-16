@@ -6,6 +6,9 @@ const _ = require('lodash')
 const shell = require('shelljs')
 const Promise = require('bluebird')
 const chalk = require('chalk')
+const request = require('request-promise')
+const retry = require('async-retry')
+const moment = require('moment')
 const deployPath = require('./deployPath')
 const writeEcosystem = require('./writeEcosystem')
 const pkg = require('./package.json')
@@ -51,6 +54,27 @@ program.command('app [name]').action(async name => {
           config.ecosystemPath
         } --only ${appNames.join(',')}`
       )
+    }
+    for (const appName of appNames) {
+      const app = config.app[appName]
+      if (app.port) {
+        const url = `http://${host}:${app.port}${app.path || ''}`
+        try {
+          await retry(
+            async () => {
+              await request({
+                url,
+                timeout: 5000,
+              })
+            },
+            {
+              retries: 6,
+            }
+          )
+        } catch (error) {
+          throw new Error(`Failed to request ${url}`)
+        }
+      }
     }
   }
 })
