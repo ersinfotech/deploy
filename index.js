@@ -58,7 +58,7 @@ program.command('app [name]').action(async name => {
     for (const appName of appNames) {
       const app = config.app[appName]
       if (app.port) {
-        const url = `http://${host}:${app.port}${app.path || ''}`
+        const url = `http://${host}:${app.port}${app.route || ''}`
         try {
           await retry(
             async () => {
