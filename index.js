@@ -68,7 +68,7 @@ program.command('app [name]').action(async name => {
               })
             },
             {
-              retries: 6,
+              retries: app.retry || 6,
             }
           )
         } catch (error) {
