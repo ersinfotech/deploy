@@ -9,6 +9,7 @@ const chalk = require('chalk')
 const request = require('request-promise')
 const retry = require('async-retry')
 const moment = require('moment')
+const Consul = require('consul')
 const deployPath = require('./deployPath')
 const writeEcosystem = require('./writeEcosystem')
 const pkg = require('./package.json')
@@ -73,6 +74,28 @@ program.command('app [name]').action(async name => {
           )
         } catch (error) {
           throw new Error(`Failed to request ${url}`)
+        }
+        if (app.consul) {
+          const consul = Consul({
+            host,
+            promisify: true,
+          })
+          try {
+            await consul.agent.service.register({
+              name: appName,
+              tags: ['prometheus'],
+              port: app.port,
+              check: {
+                http: url,
+                interval: '1m',
+                ttl: '2m',
+                deregistercriticalserviceafter: '1m',
+              },
+            })
+            console.log(`success to register ${appName} in consul`)
+          } catch (error) {
+            console.error(`failure to register ${appName} in consul`)
+          }
         }
       }
     }
