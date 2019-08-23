@@ -143,10 +143,10 @@ program.command('nginx').action(async () => {
   }
   for (const [hostName, host] of Object.entries(config.host)) {
     shell.exec(
-      `echo ${password} | ssh -tt ${host} sudo systemctl restart nginx`,
+      `echo ${password} | ssh -tt ${host} sudo systemctl reload nginx`,
       { silent: true }
     )
-    console.log(`${hostName} nginx restart`)
+    console.log(`${hostName} nginx reload`)
   }
 })
 
