@@ -18,89 +18,100 @@ const config = require(deployPath)
 
 program.version(pkg.version, '-v, --version')
 
-program.command('app [name]').action(async name => {
-  let names
-  writeEcosystem(config)
-  if (name) {
-    const app = config.app[name]
-    if (!app) {
-      console.error(`${name} not exists`)
-      return
-    }
-    names = _.castArray(name)
-  } else {
-    try {
-      const prompt = new MultiSelect({
-        message: 'Select an app to restart',
-        choices: _.keys(config.app),
-      })
-      names = await prompt.run()
-    } catch (error) {
-      return
-    }
-  }
-  for (const [hostName, host] of Object.entries(config.host)) {
-    const appNames = _.reject(names, name => {
-      const app = config.app[name]
-      if (app.host && app.host !== hostName) {
-        return true
-      }
-    })
-    if (!_.isEmpty(appNames)) {
-      console.log(
-        chalk.green(`${hostName} ${appNames.join(', ')} startOrRestart`)
-      )
-      shell.exec(
-        `ssh ${host} pm2 startOrRestart ${
-          config.ecosystemPath
-        } --only ${appNames.join(',')}`
-      )
-    }
-    for (const appName of appNames) {
-      const app = config.app[appName]
-      if (app.port) {
-        const url = `http://${host}:${app.port}${app.route || ''}`
-        try {
-          await retry(
-            async () => {
-              await request({
-                url,
-                timeout: 5000,
-              })
-            },
-            {
-              retries: app.retry || 6,
-            }
-          )
-        } catch (error) {
-          throw new Error(`Failed to request ${url}`)
+program
+  .command('app [name]')
+  .option('--host <host>')
+  .action(async (name, { host }) => {
+    let names
+    writeEcosystem(config)
+    if (name) {
+      if (name === 'all') {
+        names = _.keys(config.app)
+      } else {
+        const app = config.app[name]
+        if (!app) {
+          console.error(`${name} not exists`)
+          return
         }
-        if (app.consul) {
-          const consul = Consul({
-            host,
-            promisify: true,
-          })
+        names = _.castArray(name)
+      }
+    } else {
+      try {
+        const prompt = new MultiSelect({
+          message: 'Select an app to restart',
+          choices: _.keys(config.app),
+        })
+        names = await prompt.run()
+      } catch (error) {
+        return
+      }
+    }
+    for (const [hostName, ip] of Object.entries(config.host)) {
+      if (host && host !== hostName) {
+        continue
+      }
+      const appNames = _.reject(names, name => {
+        const app = config.app[name]
+        app.host = _.compact(_.castArray(app.host))
+        if (!_.isEmpty(app.host) && !_.includes(app.host, hostName)) {
+          return true
+        }
+      })
+      if (!_.isEmpty(appNames)) {
+        console.log(
+          chalk.green(`${hostName} ${appNames.join(', ')} startOrRestart`)
+        )
+        shell.exec(
+          `ssh ${ip} pm2 startOrRestart ${
+            config.ecosystemPath
+          } --only ${appNames.join(',')}`
+        )
+      }
+      for (const appName of appNames) {
+        const app = config.app[appName]
+        if (app.port) {
+          const url = `http://${ip}:${app.port}${app.route || ''}`
           try {
-            await consul.agent.service.register({
-              name: appName,
-              tags: ['prometheus'],
-              port: app.port,
-              check: {
-                http: url,
-                interval: '1m',
-                ttl: '2m',
-                deregistercriticalserviceafter: '1m',
+            await retry(
+              async () => {
+                await request({
+                  url,
+                  timeout: 5000,
+                })
               },
-            })
-            console.log(`success to register ${appName} in consul`)
+              {
+                retries: app.retry || 6,
+              }
+            )
           } catch (error) {
-            console.error(`failure to register ${appName} in consul`)
+            throw new Error(`Failed to request ${url}`)
+          }
+          if (app.consul) {
+            const consul = Consul({
+              host: ip,
+              promisify: true,
+            })
+            try {
+              await consul.agent.service.register({
+                name: appName,
+                tags: ['prometheus'],
+                port: app.port,
+                check: {
+                  http: url,
+                  interval: '1m',
+                  ttl: '2m',
+                  deregistercriticalserviceafter: '1m',
+                },
+              })
+              console.log(`success to register ${appName} in consul`)
+            } catch (error) {
+              console.error(`failure to register ${appName} in consul`)
+            }
           }
         }
       }
     }
-  }
-})
+  })
 
 program.command('run [command...]').action(command => {
   for (const [hostName, host] of Object.entries(config.host)) {
@@ -116,7 +127,9 @@ program.command('sudo [command...]').action(async command => {
   const password = await prompt.run()
   for (const [hostName, host] of Object.entries(config.host)) {
     console.log(chalk.green(`${hostName} sudo output:`))
-    const { stdout } = shell.exec(
+    const {
+      stdout,
+    } = shell.exec(
       `echo ${password} | ssh -tt ${host} sudo ${command.join(' ')}`,
       { silent: true }
     )
