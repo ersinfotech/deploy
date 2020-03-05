@@ -57,17 +57,13 @@ program
           return true
         }
       })
-      if (!_.isEmpty(appNames)) {
-        console.log(
-          chalk.green(`${hostName} ${appNames.join(', ')} startOrRestart`)
-        )
-        shell.exec(
-          `ssh ${ip} pm2 startOrRestart ${
-            config.ecosystemPath
-          } --only ${appNames.join(',')}`
-        )
-      }
       for (const appName of appNames) {
+        shell.exec(
+          `ssh ${ip} pm2 startOrRestart ${config.ecosystemPath} --only ${appName}`
+        )
+
+        console.log('')
+
         const app = config.app[appName]
         if (app.port) {
           const url = `http://${ip}:${app.port}${app.route || ''}`
@@ -84,7 +80,7 @@ program
               }
             )
           } catch (error) {
-            throw new Error(`Failed to request ${url}`)
+            throw new Error(`${appName}@${hostName}: Failed to request ${url}`)
           }
           if (app.consul) {
             const consul = Consul({
