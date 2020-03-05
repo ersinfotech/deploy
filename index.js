@@ -21,29 +21,30 @@ program.version(pkg.version, '-v, --version')
 program
   .command('app [name]')
   .option('--host <host>')
-  .action(async (name, { host }) => {
+  .option('--all')
+  .action(async (name, { host, all }) => {
     let names
     writeEcosystem(config)
     if (name) {
-      if (name === 'all') {
+      const app = config.app[name]
+      if (!app) {
+        console.error(`${name} not exists`)
+        return
+      }
+      names = _.castArray(name)
+    } else {
+      if (all) {
         names = _.keys(config.app)
       } else {
-        const app = config.app[name]
-        if (!app) {
-          console.error(`${name} not exists`)
+        try {
+          const prompt = new MultiSelect({
+            message: 'Select an app to restart',
+            choices: _.keys(config.app),
+          })
+          names = await prompt.run()
+        } catch (error) {
           return
         }
-        names = _.castArray(name)
-      }
-    } else {
-      try {
-        const prompt = new MultiSelect({
-          message: 'Select an app to restart',
-          choices: _.keys(config.app),
-        })
-        names = await prompt.run()
-      } catch (error) {
-        return
       }
     }
     for (const [hostName, ip] of Object.entries(config.host)) {
