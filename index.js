@@ -51,7 +51,7 @@ program
       if (host && host !== hostName) {
         continue
       }
-      const appNames = _.reject(names, name => {
+      const appNames = _.reject(names, (name) => {
         const app = config.app[name]
         app.host = _.compact(_.castArray(app.host))
         if (!_.isEmpty(app.host) && !_.includes(app.host, hostName)) {
@@ -110,14 +110,14 @@ program
     }
   })
 
-program.command('run [command...]').action(command => {
+program.command('run [command...]').action((command) => {
   for (const [hostName, host] of Object.entries(config.host)) {
     console.log(chalk.green(`${hostName} run output:`))
     shell.exec(`ssh ${host} ${command.join(' ')}`)
   }
 })
 
-program.command('sudo [command...]').action(async command => {
+program.command('sudo [command...]').action(async (command) => {
   const prompt = new Password({
     message: '[sudo] password:',
   })
@@ -140,11 +140,7 @@ program.command('sudo [command...]').action(async command => {
 })
 
 program.command('nginx').action(async () => {
-  const prompt = new Password({
-    message: '[sudo] password:',
-  })
-  const password = await prompt.run()
-  const { code } = shell.exec(`echo ${password} | sudo -S nginx -t`, {
+  const { code } = shell.exec(`sudo nginx -t`, {
     silent: true,
   })
   if (code !== 0) {
@@ -152,10 +148,7 @@ program.command('nginx').action(async () => {
     return
   }
   for (const [hostName, host] of Object.entries(config.host)) {
-    shell.exec(
-      `echo ${password} | ssh -tt ${host} sudo systemctl reload nginx`,
-      { silent: true }
-    )
+    shell.exec(`sudo systemctl -H ${host} reload nginx`, { silent: true })
     console.log(`${hostName} nginx reload`)
   }
 })
