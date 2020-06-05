@@ -110,47 +110,65 @@ program
     }
   })
 
-program.command('run [command...]').action((command) => {
-  for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(chalk.green(`${hostName} run output:`))
-    shell.exec(`ssh ${host} ${command.join(' ')}`)
-  }
-})
-
-program.command('sudo [command...]').action(async (command) => {
-  const prompt = new Password({
-    message: '[sudo] password:',
+program
+  .command('run [command...]')
+  .option('--host <host>')
+  .action((command, { host }) => {
+    for (const [hostName, ip] of Object.entries(config.host)) {
+      if (host && host !== hostName) {
+        continue
+      }
+      console.log(chalk.green(`${hostName} run output:`))
+      shell.exec(`ssh ${ip} ${command.join(' ')}`)
+    }
   })
-  const password = await prompt.run()
-  for (const [hostName, host] of Object.entries(config.host)) {
-    console.log(chalk.green(`${hostName} sudo output:`))
-    const {
-      stdout,
-    } = shell.exec(
-      `echo ${password} | ssh -tt ${host} sudo ${command.join(' ')}`,
-      { silent: true }
-    )
-    console.log(
-      stdout
-        .replace(/^.*\r\n/, '')
-        .replace(/^.*\r\n/, '')
-        .trim()
-    )
-  }
-})
 
-program.command('nginx').action(async () => {
-  const { code } = shell.exec(`sudo nginx -t`, {
-    silent: true,
+program
+  .command('sudo [command...]')
+  .option('--host <host>')
+  .action(async (command, { host }) => {
+    const prompt = new Password({
+      message: '[sudo] password:',
+    })
+    const password = await prompt.run()
+    for (const [hostName, ip] of Object.entries(config.host)) {
+      if (host && host !== hostName) {
+        continue
+      }
+      console.log(chalk.green(`${hostName} sudo output:`))
+      const {
+        stdout,
+      } = shell.exec(
+        `echo ${password} | ssh -tt ${ip} sudo ${command.join(' ')}`,
+        { silent: true }
+      )
+      console.log(
+        stdout
+          .replace(/^.*\r\n/, '')
+          .replace(/^.*\r\n/, '')
+          .trim()
+      )
+    }
   })
-  if (code !== 0) {
-    console.error(`nginx test fail`)
-    return
-  }
-  for (const [hostName, host] of Object.entries(config.host)) {
-    shell.exec(`sudo systemctl -H ${host} reload nginx`, { silent: true })
-    console.log(`${hostName} nginx reload`)
-  }
-})
+
+program
+  .command('nginx')
+  .option('--host <host>')
+  .action(async (command, { host }) => {
+    const { code } = shell.exec(`sudo nginx -t`, {
+      silent: true,
+    })
+    if (code !== 0) {
+      console.error(`nginx test fail`)
+      return
+    }
+    for (const [hostName, ip] of Object.entries(config.host)) {
+      if (host && host !== hostName) {
+        continue
+      }
+      shell.exec(`sudo systemctl -H ${ip} reload nginx`, { silent: true })
+      console.log(`${hostName} nginx reload`)
+    }
+  })
 
 program.parse(process.argv)
