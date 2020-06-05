@@ -154,7 +154,7 @@ program
 program
   .command('nginx')
   .option('--host <host>')
-  .action(async (command, { host }) => {
+  .action(async ({ host }) => {
     const { code } = shell.exec(`sudo nginx -t`, {
       silent: true,
     })
