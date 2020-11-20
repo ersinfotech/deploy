@@ -67,21 +67,25 @@ program
 
         const app = config.app[appName]
         if (app.port) {
-          const url = `http://${ip}:${app.port}${app.route || ''}`
-          try {
-            await retry(
-              async () => {
-                await request({
-                  url,
-                  timeout: 5000,
-                })
-              },
-              {
-                retries: app.retry || 6,
-              }
-            )
-          } catch (error) {
-            throw new Error(`${appName}@${hostName}: Failed to request ${url}`)
+          if (app.route) {
+            const url = `http://${ip}:${app.port}${app.route}`
+            try {
+              await retry(
+                async () => {
+                  await request({
+                    url,
+                    timeout: 5000,
+                  })
+                },
+                {
+                  retries: app.retry || 6,
+                }
+              )
+            } catch (error) {
+              throw new Error(
+                `${appName}@${hostName}: Failed to request ${url}`
+              )
+            }
           }
           if (app.consul) {
             const consul = Consul({
