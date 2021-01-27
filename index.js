@@ -86,27 +86,27 @@ program
                 `${appName}@${hostName}: Failed to request ${url}`
               )
             }
-          }
-          if (app.consul) {
-            const consul = Consul({
-              host: ip,
-              promisify: true,
-            })
-            try {
-              await consul.agent.service.register({
-                name: appName,
-                tags: ['prometheus'],
-                port: app.port,
-                check: {
-                  http: url,
-                  interval: '1m',
-                  ttl: '2m',
-                  deregistercriticalserviceafter: '1m',
-                },
+            if (app.consul) {
+              const consul = Consul({
+                host: ip,
+                promisify: true,
               })
-              console.log(`success to register ${appName} in consul`)
-            } catch (error) {
-              console.error(`failure to register ${appName} in consul`)
+              try {
+                await consul.agent.service.register({
+                  name: appName,
+                  tags: ['prometheus'],
+                  port: app.port,
+                  check: {
+                    http: url,
+                    interval: '1m',
+                    ttl: '2m',
+                    deregistercriticalserviceafter: '1m',
+                  },
+                })
+                console.log(`success to register ${appName} in consul`)
+              } catch (error) {
+                console.error(`failure to register ${appName} in consul`)
+              }
             }
           }
         }
