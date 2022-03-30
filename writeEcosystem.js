@@ -23,12 +23,13 @@ module.exports = {
     interpreter: process.env.NVM_DIR + '/nvm-exec',
     interpreter_args: 'node',
     log_date_format: '',
+    ...app,
     env: {
       NODE_ENV: 'production',
       NODE_APP_INSTANCE: '',
       PORT: app.port,
+      ...app.env,
     },
-    ...app,
   })),
 }
 `
